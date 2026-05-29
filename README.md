@@ -99,18 +99,6 @@ No prior LLM-infrastructure experience is assumed — every technical term is ex
 14. Plain-English glossary
 
 ---
-
-## Viewing the interactive version online (optional)
-
-You can publish the HTML for free with **GitHub Pages**:
-
-1. Push this repo to GitHub.
-2. Go to **Settings → Pages**.
-3. Under **Build and deployment**, set **Source** to `Deploy from a branch`, branch `main`, folder `/ (root)`.
-4. Wait a minute, then open `https://<your-username>.github.io/<repo-name>/` — it serves `index.html` automatically.
-
----
-
 ## License
 
 Released under the [MIT License](LICENSE) — free to use, share, and adapt with attribution.
