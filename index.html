@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Designing a Production-Grade Agentic System — A Step-by-Step Tutorial</title>
+<style>
+  :root {
+    --bg: #f6f8fc;
+    --panel: #ffffff;
+    --panel-2: #eef1f8;
+    --ink: #1a1e28;
+    --ink-dim: #414a5c;
+    --muted: #717a8c;
+    --accent: #3b5bdb;
+    --accent-2: #7048e8;
+    --good: #167a4e;
+    --warn: #b5630c;
+    --bad: #cc2f2f;
+    --border: #e0e5ee;
+    --code-bg: #f1edfb;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.65; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 28px 96px; }
+  header.hero { padding: 40px 0 24px; border-bottom: 1px solid var(--border); margin-bottom: 36px; }
+  .eyebrow { color: var(--accent); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; }
+  h1 { font-size: 38px; line-height: 1.2; margin: 10px 0 12px; letter-spacing: -0.02em; }
+  h2 { font-size: 26px; margin: 56px 0 14px; letter-spacing: -0.01em; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  h3 { font-size: 19px; margin: 28px 0 8px; color: var(--ink); }
+  h4 { font-size: 15px; margin: 18px 0 6px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; }
+  p { color: var(--ink-dim); }
+  a { color: var(--accent); }
+  body { background: linear-gradient(180deg, #eef2fb 0%, var(--bg) 240px); min-height: 100vh; }
+  code { background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.92em; color: #6d28d9; font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-size: 13px; }
+  .lede { font-size: 18px; color: var(--ink); max-width: 780px; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .toc { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin: 24px 0 8px; }
+  .toc h4 { margin-top: 0; }
+  .toc ol { margin: 8px 0 0; padding-left: 22px; color: var(--ink-dim); }
+  .toc a { text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin: 18px 0; box-shadow: 0 1px 3px rgba(26,30,40,0.05); }
+  .card.good { border-left: 3px solid var(--good); }
+  .card.warn { border-left: 3px solid var(--warn); }
+  .card.bad  { border-left: 3px solid var(--bad);  }
+  .card.info { border-left: 3px solid var(--accent); }
+
+  .pillrow { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; background: var(--panel-2); border: 1px solid var(--border); color: var(--ink-dim); }
+  .pill.good { color: var(--good); border-color: rgba(93,212,163,0.3); }
+  .pill.warn { color: var(--warn); border-color: rgba(245,184,107,0.3); }
+  .pill.bad  { color: var(--bad);  border-color: rgba(245,123,123,0.3); }
+
+  .diagram { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin: 16px 0 8px; text-align: center; }
+  .diagram svg { max-width: 100%; height: auto; }
+  .caption { color: var(--muted); font-size: 13px; text-align: center; margin: 6px 0 0; }
+
+  table.tradeoff { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  table.tradeoff th, table.tradeoff td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+  table.tradeoff th { background: var(--panel-2); color: var(--ink); font-weight: 600; }
+  table.tradeoff td { color: var(--ink-dim); }
+
+  .step-header { display: flex; align-items: baseline; gap: 14px; }
+  .step-num { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #ffffff; font-weight: 700; font-size: 15px; padding: 0 10px; box-shadow: 0 2px 6px rgba(112,72,232,0.25); }
+
+  .breaks-if { background: #fdecec; border: 1px solid #f4caca; border-left: 5px solid var(--bad); padding: 12px 16px; border-radius: 8px; margin: 12px 0; }
+  .breaks-if strong { color: #b21f1f; }
+
+  .nb { background: #eaf0ff; border: 1px solid #c9d6fb; border-left: 5px solid var(--accent); padding: 12px 16px; border-radius: 8px; margin: 12px 0; }
+  .nb strong { color: #2742b8; }
+
+  /* intuition (analogy) callout */
+  .intuition { display: flex; gap: 14px; background: #f3eeff; border: 1px solid #d9ccfa; border-left: 5px solid var(--accent-2); border-radius: 10px; padding: 14px 16px; margin: 14px 0; }
+  .intuition .ibulb { flex: 0 0 auto; width: 26px; height: 26px; margin-top: 2px; }
+  .intuition .ibody { flex: 1; }
+  .intuition .ihead { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #5b2bc4; font-weight: 700; margin: 0 0 4px; }
+  .intuition p { margin: 0; color: var(--ink); font-size: 15px; }
+  .intuition em { color: #5b2bc4; font-style: normal; font-weight: 600; }
+
+  /* worked example callout */
+  .example { background: #e6f6ee; border: 1px solid #b8e3cc; border-left: 5px solid var(--good); border-radius: 8px; padding: 13px 16px; margin: 14px 0; }
+  .example .ehead { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #0f6b43; font-weight: 700; margin: 0 0 5px; }
+  .example p { margin: 4px 0; font-size: 14px; color: var(--ink-dim); }
+  .example .req { color: var(--ink); font-style: italic; font-weight: 600; }
+
+  /* severity badges */
+  .sev { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: middle; }
+  .sev.crit { background: #fce4e4; color: #b21f1f; border: 1px solid #f0b6b6; }
+  .sev.high { background: #fdeccf; color: #95500a; border: 1px solid #f1cf9a; }
+  .sev.med  { background: #e3eafe; color: #2742b8; border: 1px solid #bccbfa; }
+  .sev.low  { background: #d9f2e5; color: #0f6b43; border: 1px solid #aadcc2; }
+  .sev-key { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 10px 0 0; font-size: 13px; color: var(--ink-dim); }
+
+  /* companion component cards woven into a step */
+  .companions { margin: 16px 0 6px; }
+  .companions > .clabel { font-size: 13px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin: 0 0 10px; }
+  .companion { background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--accent-2); border-radius: 8px; padding: 12px 16px; margin: 10px 0; }
+  .companion .chead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .companion .cname { font-weight: 600; color: var(--ink); font-size: 15px; }
+  .companion .crole { color: var(--muted); font-size: 12px; }
+  .companion p { margin: 4px 0; font-size: 14px; }
+  .companion .cbreak { color: var(--ink-dim); font-size: 13px; margin-top: 6px; }
+  .companion .cbreak b { color: var(--bad); }
+  .companion { box-shadow: 0 1px 3px rgba(26,30,40,0.05); }
+  .companion .cplain { color: var(--ink-dim); font-size: 13px; margin-top: 6px; padding: 9px 12px; background: #f3eeff; border: 1px solid #e3d9fb; border-radius: 6px; }
+  .companion .cplain b { color: #5b2bc4; }
+
+  /* glossary */
+  .glossary { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 6px 22px; margin: 18px 0; }
+  .glossary dl { margin: 0; }
+  .glossary dt { color: var(--ink); font-weight: 700; font-size: 15px; margin: 16px 0 2px; }
+  .glossary dt .term-abbr { color: var(--accent); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; }
+  .glossary dd { margin: 0 0 6px; color: var(--ink-dim); font-size: 14px; }
+  .glossary dd .lit { color: var(--muted); font-style: italic; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } h1 { font-size: 30px; } .companion .chead { gap: 6px; } }
+
+  ul.tight { margin: 6px 0; }
+  ul.tight li { margin: 4px 0; color: var(--ink-dim); }
+
+  footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">System Design · AI Engineering</div>
+  <h1>Designing a Production-Grade Agentic System</h1>
+  <p class="lede">A step-by-step tutorial that walks through every component of a real agentic system — what it does, where it lives, what breaks if you forget it, and the trade-offs behind each decision. We'll build the system progressively, adding one component at a time and justifying it before moving on.</p>
+  <p class="meta">Reading time: ~45 minutes · One running "office" analogy, a worked example traced end-to-end, 6 diagrams, and the components most teams forget on their first build.</p>
+</header>
+
+<div class="toc">
+  <h4>What you'll learn</h4>
+  <ol>
+    <li><a href="#mental-model">The mental model: a request's journey</a></li>
+    <li><a href="#step0">Step 0 — The naive baseline (and why it fails)</a></li>
+    <li><a href="#step1">Step 1 — The LLM Gateway</a></li>
+    <li><a href="#step2">Step 2 — The Orchestrator</a></li>
+    <li><a href="#step3">Step 3 — Sub-agents</a></li>
+    <li><a href="#step4">Step 4 — The Tool Registry</a></li>
+    <li><a href="#step5">Step 5 — Memory (the question that trips everyone up)</a></li>
+    <li><a href="#step6">Step 6 — Vector Store &amp; Retrieval</a></li>
+    <li><a href="#step7">Step 7 — Guardrails (input + output)</a></li>
+    <li><a href="#step8">Step 8 — Observability</a></li>
+    <li><a href="#forgotten">The big picture: every component in one map</a></li>
+    <li><a href="#failures">Failure-mode catalog: what breaks if you remove each piece</a></li>
+    <li><a href="#playbook">A build sequence you can follow</a></li>
+    <li><a href="#glossary">Plain-English glossary</a></li>
+  </ol>
+</div>
+
+<!-- ============================ MENTAL MODEL ============================ -->
+<h2 id="mental-model">The mental model: a request's journey</h2>
+<p>Before dragging a single box, hold this picture in your head. A user request flows through <em>seven concerns</em>, in order, every time:</p>
+<ol style="color:var(--ink-dim)">
+  <li><strong>Entry &amp; identity</strong> — who is asking, is the request valid, who pays</li>
+  <li><strong>Safety in</strong> — guardrails on input (prompt injection, PII, policy)</li>
+  <li><strong>Routing &amp; planning</strong> — decompose the task, pick the model</li>
+  <li><strong>Reasoning</strong> — agent loop, possibly with sub-agents</li>
+  <li><strong>Action</strong> — controlled tool calls and retrieval</li>
+  <li><strong>Memory</strong> — short-term (context) and long-term (state, knowledge)</li>
+  <li><strong>Safety out &amp; observation</strong> — guardrails on output, telemetry, evals</li>
+</ol>
+<p>Every component you'll add lives on one of these seven stops. If you can name which stop a component belongs to and why, the rest of the design falls into place.</p>
+
+<div class="diagram">
+  <svg viewBox="0 0 1000 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Request lifecycle: seven concerns from entry to observation">
+    <defs>
+      <linearGradient id="lifeGrad" x1="0" x2="1">
+        <stop offset="0" stop-color="#3b5bdb"/>
+        <stop offset="1" stop-color="#7048e8"/>
+      </linearGradient>
+    </defs>
+    <line x1="40" y1="110" x2="960" y2="110" stroke="#c2cce0" stroke-width="2" stroke-dasharray="4 4"/>
+    <!-- 7 stops -->
+    <g font-family="Inter, sans-serif" font-size="12" fill="#1a1e28" text-anchor="middle">
+      <g><circle cx="80"  cy="110" r="22" fill="#ffffff" stroke="url(#lifeGrad)" stroke-width="2"/><text x="80"  y="114">1</text><text x="80"  y="160" fill="#586073">Identity</text></g>
+      <g><circle cx="220" cy="110" r="22" fill="#ffffff" stroke="url(#lifeGrad)" stroke-width="2"/><text x="220" y="114">2</text><text x="220" y="160" fill="#586073">Safety in</text></g>
+      <g><circle cx="360" cy="110" r="22" fill="#ffffff" stroke="url(#lifeGrad)" stroke-width="2"/><text x="360" y="114">3</text><text x="360" y="160" fill="#586073">Routing</text></g>
+      <g><circle cx="500" cy="110" r="22" fill="#ffffff" stroke="url(#lifeGrad)" stroke-width="2"/><text x="500" y="114">4</text><text x="500" y="160" fill="#586073">Reasoning</text></g>
+      <g><circle cx="640" cy="110" r="22" fill="#ffffff" stroke="url(#lifeGrad)" stroke-width="2"/><text x="640" y="114">5</text><text x="640" y="160" fill="#586073">Action</text></g>
+      <g><circle cx="780" cy="110" r="22" fill="#ffffff" stroke="url(#lifeGrad)" stroke-width="2"/><text x="780" y="114">6</text><text x="780" y="160" fill="#586073">Memory</text></g>
+      <g><circle cx="920" cy="110" r="22" fill="#ffffff" stroke="url(#lifeGrad)" stroke-width="2"/><text x="920" y="114">7</text><text x="920" y="160" fill="#586073">Safety out + Observe</text></g>
+    </g>
+    <text x="500" y="35" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" fill="#586073">A request flows through seven concerns. Every component you add belongs to one of them.</text>
+  </svg>
+  <div class="caption">Figure 1 — The seven-stop mental model. Memorize this. It's the spine the whole system hangs on.</div>
+</div>
+
+<p>As we build, every component carries a <strong>severity badge</strong> — how much pain its absence causes in production. The core component of each step is labeled, and so are the <em>companion components</em> that attach to the same step but are easy to skip on a first build. By the end you'll have seen the whole system in one flow, each piece tagged by how badly you'll miss it.</p>
+<div class="card info">
+  <div class="sev-key">
+    <span><span class="sev crit">Critical</span> &nbsp;skip it and you get a security or data-leak incident</span>
+    <span><span class="sev high">High</span> &nbsp;skip it and you can't operate or debug at scale</span>
+    <span><span class="sev med">Medium</span> &nbsp;skip it and quality, cost, or velocity suffer</span>
+    <span><span class="sev low">Low</span> &nbsp;a clear win, but you'll survive without it for a while</span>
+  </div>
+</div>
+
+<h3>One analogy for the whole system: a busy office</h3>
+<p>Abstract boxes are hard to remember. A company office is not. Throughout this tutorial we'll lean on one picture: <strong>your agentic system is an office that handles customer requests.</strong> Every technical component has an office equivalent, and once you see the mapping, the architecture stops feeling like jargon.</p>
+
+<div class="diagram">
+  <svg viewBox="0 0 1000 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The agentic system as a busy office: each component mapped to an office role">
+    <defs>
+      <linearGradient id="officeG" x1="0" x2="1"><stop offset="0" stop-color="#3b5bdb"/><stop offset="1" stop-color="#7048e8"/></linearGradient>
+      <marker id="oarr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a93a8"/></marker>
+    </defs>
+    <style>
+      .ot { font-family: Inter, sans-serif; font-size: 12.5px; fill:#1a1e28; font-weight:600; }
+      .os { font-family: Inter, sans-serif; font-size: 10.5px; fill:#586073; }
+      .ob { fill:#ffffff; stroke:#c2cce0; }
+      .oc { fill:#e8edff; stroke:url(#officeG); stroke-width:2; }
+    </style>
+    <!-- customer -->
+    <circle cx="60" cy="180" r="26" fill="#ffffff" stroke="#167a4e" stroke-width="2"/>
+    <text x="60" y="176" text-anchor="middle" class="ot">Cust-</text>
+    <text x="60" y="190" text-anchor="middle" class="ot">omer</text>
+    <line x1="86" y1="180" x2="118" y2="180" class="" stroke="#8a93a8" stroke-width="1.5" marker-end="url(#oarr)"/>
+
+    <!-- reception -->
+    <rect x="120" y="150" width="120" height="60" rx="9" class="ob"/>
+    <text x="180" y="176" text-anchor="middle" class="ot">Front desk</text>
+    <text x="180" y="194" text-anchor="middle" class="os">gateway + ID + guards</text>
+    <line x1="240" y1="180" x2="272" y2="180" stroke="#8a93a8" stroke-width="1.5" marker-end="url(#oarr)"/>
+
+    <!-- project manager (orchestrator) -->
+    <rect x="274" y="140" width="150" height="80" rx="10" class="oc"/>
+    <text x="349" y="172" text-anchor="middle" class="ot">Project manager</text>
+    <text x="349" y="190" text-anchor="middle" class="os">orchestrator</text>
+    <text x="349" y="204" text-anchor="middle" class="os">splits &amp; assigns work</text>
+
+    <!-- specialists -->
+    <rect x="470" y="60"  width="140" height="48" rx="9" class="ob"/><text x="540" y="82" text-anchor="middle" class="ot">Researcher</text><text x="540" y="98" text-anchor="middle" class="os">sub-agent</text>
+    <rect x="470" y="156" width="140" height="48" rx="9" class="ob"/><text x="540" y="178" text-anchor="middle" class="ot">Writer</text><text x="540" y="194" text-anchor="middle" class="os">sub-agent</text>
+    <rect x="470" y="252" width="140" height="48" rx="9" class="ob"/><text x="540" y="274" text-anchor="middle" class="ot">Reviewer</text><text x="540" y="290" text-anchor="middle" class="os">sub-agent</text>
+    <line x1="424" y1="172" x2="466" y2="90"  stroke="#8a93a8" stroke-width="1.5" marker-end="url(#oarr)"/>
+    <line x1="424" y1="180" x2="466" y2="180" stroke="#8a93a8" stroke-width="1.5" marker-end="url(#oarr)"/>
+    <line x1="424" y1="188" x2="466" y2="272" stroke="#8a93a8" stroke-width="1.5" marker-end="url(#oarr)"/>
+
+    <!-- equipment room (tools) -->
+    <rect x="650" y="120" width="150" height="58" rx="9" class="ob"/>
+    <text x="725" y="144" text-anchor="middle" class="ot">Equipment room</text>
+    <text x="725" y="162" text-anchor="middle" class="os">tool registry + clerk</text>
+    <line x1="610" y1="172" x2="646" y2="155" stroke="#8a93a8" stroke-width="1.5" marker-end="url(#oarr)"/>
+
+    <!-- filing/library (memory) -->
+    <rect x="650" y="196" width="150" height="58" rx="9" class="ob"/>
+    <text x="725" y="220" text-anchor="middle" class="ot">Filing &amp; library</text>
+    <text x="725" y="238" text-anchor="middle" class="os">memory + vector store</text>
+    <line x1="610" y1="188" x2="646" y2="222" stroke="#8a93a8" stroke-width="1.5" marker-end="url(#oarr)"/>
+
+    <!-- outgoing mail review (output guardrails) -->
+    <rect x="830" y="120" width="150" height="58" rx="9" class="ob"/>
+    <text x="905" y="144" text-anchor="middle" class="ot">Mailroom review</text>
+    <text x="905" y="162" text-anchor="middle" class="os">output guardrails</text>
+    <line x1="800" y1="149" x2="826" y2="149" stroke="#8a93a8" stroke-width="1.5" marker-end="url(#oarr)"/>
+
+    <!-- CCTV / accounting (observability) -->
+    <rect x="830" y="196" width="150" height="58" rx="9" class="ob"/>
+    <text x="905" y="220" text-anchor="middle" class="ot">CCTV + accounting</text>
+    <text x="905" y="238" text-anchor="middle" class="os">observability + evals</text>
+    <line x1="800" y1="225" x2="826" y2="225" stroke="#8a93a8" stroke-width="1.5" marker-end="url(#oarr)"/>
+
+    <text x="500" y="340" text-anchor="middle" class="os" font-size="12">Every box in the rest of this tutorial is one of these office roles. Keep this picture in mind.</text>
+  </svg>
+  <div class="caption">Figure 2 — The whole system as an office. A customer walks in the front door, a project manager splits up the work, specialists do it using the equipment room and the filing system, and nothing leaves without a mailroom check — all of it on camera.</div>
+</div>
+
+<h3>A real request we'll follow the whole way through</h3>
+<p>To keep things concrete, we'll trace one example request through every component as we add it:</p>
+<div class="example">
+  <p class="ehead">Our running example</p>
+  <p class="req">"Find our top 3 customers by revenue last quarter and draft a thank-you email to each."</p>
+  <p>It's a good example because it touches everything: it needs <strong>permission</strong> (revenue is sensitive), <strong>planning</strong> (look up data, then rank, then write), <strong>a tool</strong> (the sales database), <strong>memory</strong> (the user's preferred email tone), and <strong>a safety check</strong> (those drafts shouldn't be auto-sent to real customers). Watch how each new component handles one more piece of it.</p>
+</div>
+
+<!-- ============================ STEP 0 ============================ -->
+<h2 id="step0">Step 0 — The naive baseline (and why it fails)</h2>
+<p>Start every system-design round by drawing the simplest thing that could possibly work. It anchors the conversation and lets you motivate each component you add.</p>
+
+<div class="diagram">
+  <svg viewBox="0 0 700 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Naive baseline: user calls LLM directly">
+    <g font-family="Inter, sans-serif" font-size="13" fill="#1a1e28">
+      <rect x="40"  y="55" width="120" height="50" rx="8" fill="#ffffff" stroke="#c2cce0"/>
+      <text x="100" y="86" text-anchor="middle">User / Client</text>
+      <rect x="290" y="55" width="120" height="50" rx="8" fill="#ffffff" stroke="#3b5bdb"/>
+      <text x="350" y="86" text-anchor="middle">LLM Provider</text>
+      <rect x="540" y="55" width="120" height="50" rx="8" fill="#ffffff" stroke="#c2cce0"/>
+      <text x="600" y="86" text-anchor="middle">Response</text>
+      <line x1="160" y1="80" x2="285" y2="80" stroke="#586073" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="410" y1="80" x2="535" y2="80" stroke="#586073" stroke-width="1.5" marker-end="url(#arr)"/>
+    </g>
+    <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#586073"/></marker></defs>
+  </svg>
+  <div class="caption">Figure 3 — The baseline. Direct calls to a provider SDK. Works in a notebook. Falls apart in production.</div>
+</div>
+
+<div class="card bad">
+  <h4>What breaks at scale</h4>
+  <ul class="tight">
+    <li><strong>Provider lock-in</strong> — model name and SDK are baked into your code; switching costs a refactor.</li>
+    <li><strong>No cost control</strong> — a runaway loop or a sloppy prompt drains your budget by Tuesday.</li>
+    <li><strong>No safety net</strong> — prompt injection, leaked PII, hallucinated tool calls all hit production unfiltered.</li>
+    <li><strong>No memory</strong> — every turn starts blind; the agent can't learn from past interactions.</li>
+    <li><strong>No visibility</strong> — when it goes wrong, you'll be reading raw stack traces, not traces of the agent's reasoning.</li>
+  </ul>
+</div>
+
+<p>Each problem above motivates one of the components we'll add. The discipline to keep is simple: <em>state the problem first, then add the component that solves it</em>. Never the other way around — a component you can't tie to a concrete failure is a component you probably don't need yet.</p>
+
+<!-- ============================ STEP 1: GATEWAY ============================ -->
+<h2 id="step1">Step 1 — The LLM Gateway <span class="sev high">High</span></h2>
+<div class="step-header"><span class="step-num">1</span><h3 style="margin:0">Why this is the right first box</h3></div>
+<div class="intuition">
+  <svg class="ibulb" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.45 1 1.15 1.1 1.9l.1.8h4.8l.1-.8c.1-.75.5-1.45 1.1-1.9A6 6 0 0 0 12 3Z" stroke="#7048e8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="ibody">
+    <p class="ihead">Think of it like…</p>
+    <p>the office <em>switchboard</em>. Nobody dials an outside expert directly — they go through the switchboard, which knows everyone's number, keeps one master phone bill, and instantly reroutes to a backup expert if a line is busy. Switch consulting firms tomorrow and not one employee has to change how they place a call.</p>
+  </div>
+</div>
+<p>Start with the gateway. It's the only component that <em>everything else depends on</em>, so its placement constrains the rest of the system. Put it down first and everything else grows around it cleanly.</p>
+
+<h4>What it is</h4>
+<p>A thin internal service (or library) that wraps every model call. Your application code never imports <code>openai</code> or <code>anthropic</code> directly — it calls <em>your</em> gateway, and the gateway talks to providers.</p>
+
+<h4>What it does</h4>
+<ul class="tight">
+  <li><strong>Routing</strong> — picks the model per request (cheap vs. capable, structured vs. chat, fallback on outage).</li>
+  <li><strong>Rate limits &amp; quotas</strong> — per-tenant, per-feature, per-user.</li>
+  <li><strong>Cost tracking</strong> — token accounting, tagged spans, budget enforcement.</li>
+  <li><strong>Retries &amp; failover</strong> — exponential backoff, cross-provider fallback when a model is down.</li>
+  <li><strong>Auth to providers</strong> — single place that holds API keys; rotates them centrally.</li>
+  <li><strong>Caching</strong> — exact-match and semantic caching of prompts (huge cost saver).</li>
+  <li><strong>Schema enforcement</strong> — wraps structured-output / tool-call schemas consistently.</li>
+</ul>
+
+<div class="breaks-if"><strong>What breaks if you forget it:</strong> You'll be doing surgical refactors across the codebase the day a model is deprecated, a provider has an outage, or finance asks "who spent $14K on tokens last week and on what?"</div>
+
+<div class="nb"><strong>Trade-off to know:</strong> Gateway as a <em>library</em> (in-process, lower latency, no extra hop) vs. a <em>service</em> (centralized policy, language-agnostic, easier to update). Pick service for multi-team orgs, library for a single-team product. The combo — thin client library, thin gateway service — is the usual compromise.</div>
+
+<div class="diagram">
+  <svg viewBox="0 0 800 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Adding the LLM gateway between app and providers">
+    <defs><marker id="arr1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#586073"/></marker></defs>
+    <g font-family="Inter, sans-serif" font-size="13" fill="#1a1e28">
+      <rect x="30"  y="85" width="120" height="50" rx="8" fill="#ffffff" stroke="#c2cce0"/><text x="90"  y="116" text-anchor="middle">User / Client</text>
+      <rect x="200" y="85" width="120" height="50" rx="8" fill="#ffffff" stroke="#c2cce0"/><text x="260" y="116" text-anchor="middle">Application</text>
+      <rect x="370" y="60" width="170" height="100" rx="10" fill="#e8edff" stroke="#3b5bdb" stroke-width="2"/>
+      <text x="455" y="92" text-anchor="middle" font-weight="600">LLM Gateway</text>
+      <text x="455" y="112" text-anchor="middle" font-size="11" fill="#586073">routing · retries · cache</text>
+      <text x="455" y="128" text-anchor="middle" font-size="11" fill="#586073">quotas · cost · auth</text>
+      <rect x="590" y="30"  width="170" height="40" rx="8" fill="#ffffff" stroke="#c2cce0"/><text x="675" y="55"  text-anchor="middle">Provider A (e.g. Anthropic)</text>
+      <rect x="590" y="95"  width="170" height="40" rx="8" fill="#ffffff" stroke="#c2cce0"/><text x="675" y="120" text-anchor="middle">Provider B (e.g. OpenAI)</text>
+      <rect x="590" y="160" width="170" height="40" rx="8" fill="#ffffff" stroke="#c2cce0"/><text x="675" y="185" text-anchor="middle">Self-hosted OSS</text>
+      <line x1="150" y1="110" x2="195" y2="110" stroke="#586073" marker-end="url(#arr1)"/>
+      <line x1="320" y1="110" x2="365" y2="110" stroke="#586073" marker-end="url(#arr1)"/>
+      <line x1="540" y1="100" x2="585" y2="55"  stroke="#586073" marker-end="url(#arr1)"/>
+      <line x1="540" y1="110" x2="585" y2="115" stroke="#586073" marker-end="url(#arr1)"/>
+      <line x1="540" y1="120" x2="585" y2="180" stroke="#586073" marker-end="url(#arr1)"/>
+    </g>
+  </svg>
+  <div class="caption">Figure 4 — The gateway is the single chokepoint for every model call. Cost, retries, and policy live here once.</div>
+</div>
+
+<div class="companions">
+  <p class="clabel">Companion components that live at the gateway</p>
+
+  <div class="companion">
+    <div class="chead"><span class="cname">Cost / Budget Router</span><span class="sev med">Medium</span><span class="crole">routing &amp; spend control</span></div>
+    <p>A policy layer that picks the <em>cheapest sufficient</em> model per task and enforces a per-request budget cap. Closely related to the gateway but a distinct concern: the gateway knows <em>how</em> to call models; the cost router decides <em>which one is worth it</em>.</p>
+    <p class="cplain"><b>In plain terms:</b> big, capable models cost more per word than small ones. Sorting "is this email angry?" doesn't need your most expensive model — a cheap one nails it. The cost router is the manager who refuses to send a senior consultant to do a five-minute job.</p>
+    <p class="cbreak"><b>What breaks without it:</b> your "smart" agent routes every trivial classification to your most expensive model, and the bill blows up before anyone notices.</p>
+  </div>
+
+  <div class="companion">
+    <div class="chead"><span class="cname">Caching (exact + semantic)</span><span class="sev low">Low–Medium</span><span class="crole">latency &amp; cost</span></div>
+    <p>Exact-match cache for identical prompts (a free hit) plus a semantic cache for "same question, different words." The semantic cache is risky — a false hit returns a wrong answer — so it needs strict similarity thresholds and per-tenant isolation.</p>
+    <p class="cplain"><b>In plain terms:</b> a <em>cache</em> is a memory of past answers so you don't redo work. An <em>exact-match</em> cache reuses the answer only if the question is word-for-word identical. A <em>semantic</em> cache reuses it when the question <em>means</em> the same thing — powerful, but if it's too loose it hands back the answer to a slightly different question, which is wrong. (<em>Per-tenant isolation</em> = one customer's cached answers are never served to another customer.)</p>
+    <p class="cbreak"><b>What breaks without it:</b> repeated identical queries cost full price every time and latency stays high; survivable, but you're leaving easy money and speed on the table.</p>
+  </div>
+
+  <div class="companion">
+    <div class="chead"><span class="cname">Prompt &amp; Model Version Registry</span><span class="sev med">Medium</span><span class="crole">reproducibility</span></div>
+    <p>Prompts are code. They need versions, diffs, rollbacks, and A/B testing. The registry stores the canonical prompt per agent role and lets the orchestrator pin a version per request. Same for model snapshots: pin <code>claude-sonnet-4-6</code> rather than "the latest sonnet" so an upstream upgrade can't silently change behavior.</p>
+    <p class="cplain"><b>In plain terms:</b> the wording of the instructions you give the model (the "prompt") changes its behavior as much as code does, so treat it the same way — keep old versions, be able to undo a bad change, and test two versions against each other (that's <em>A/B testing</em>). "<em>Pinning</em>" a version means locking to a specific one so it can't change underneath you without your knowing.</p>
+    <p class="cbreak"><b>What breaks without it:</b> a prompt edit that regresses quality has no rollback, you can't A/B safely, and a provider's model update changes your output overnight with no audit trail.</p>
+  </div>
+
+  <div class="companion">
+    <div class="chead"><span class="cname">Secrets Manager</span><span class="sev crit">Critical</span><span class="crole">credential isolation</span></div>
+    <p>The gateway holds provider API keys; tools hold their own credentials. None of these belong in code or long-lived env files. A central secrets manager (Vault, AWS Secrets Manager, etc.) issues short-lived, rotatable credentials and keeps keys off the client entirely.</p>
+    <p class="cplain"><b>In plain terms:</b> a <em>secret</em> is any password or key that proves your software is allowed to use a paid or sensitive service (an <em>API key</em> is the most common kind). The danger is leaving these in your source code where they can leak. A secrets manager is the locked key cabinet that hands out keys on demand, swaps them regularly, and never lets a copy end up in the code itself.</p>
+    <p class="cbreak"><b>What breaks without it:</b> keys leak into client bundles, logs, or git history — and a single leaked provider key can be drained by anyone who finds it.</p>
+  </div>
+
+  <div class="companion">
+    <div class="chead"><span class="cname">Data-plane / Privacy Isolation</span><span class="sev high">High</span><span class="crole">for regulated / B2B</span></div>
+    <p>For regulated industries or sensitive B2B data, the gateway needs routing rules like "PII detected → route to an in-VPC or self-hosted model only." Where the user's data physically goes, and which provider sees it, becomes a first-class routing decision.</p>
+    <p class="cplain"><b>In plain terms:</b> some data is too sensitive to send to an outside company's servers. "<em>PII</em>" (personally identifiable information) is anything that identifies a real person — name, email, social security number. "<em>Self-hosted</em>" or "<em>in-VPC</em>" means running the model on machines you control rather than a third party's. The rule "if PII, keep it in-house" makes sure private data never leaves your walls. ("<em>VPC</em>" = virtual private cloud, your own walled-off section of a cloud provider.)</p>
+    <p class="cbreak"><b>What breaks without it:</b> sensitive customer data leaves your trust boundary and lands with a third-party provider — a compliance violation that can end a contract.</p>
+  </div>
+</div>
+
+<!-- ============================ STEP 2: ORCHESTRATOR ============================ -->
+<h2 id="step2">Step 2 — The Orchestrator <span class="sev high">High</span></h2>
+<div class="step-header"><span class="step-num">2</span><h3 style="margin:0">The brain of the operation</h3></div>
+<div class="intuition">
+  <svg class="ibulb" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.45 1 1.15 1.1 1.9l.1.8h4.8l.1-.8c.1-.75.5-1.45 1.1-1.9A6 6 0 0 0 12 3Z" stroke="#7048e8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="ibody">
+    <p class="ihead">Think of it like…</p>
+    <p>the <em>project manager</em>. Hand it a vague request and it writes a checklist, decides who does each part, tracks what's finished, and assembles the final result. It doesn't do the work itself — it makes sure the right people do the right parts in the right order.</p>
+  </div>
+</div>
+<div class="example">
+  <p class="ehead">In our example</p>
+  <p>The manager reads <span class="req">"find our top 3 customers by revenue and draft a thank-you email to each"</span> and turns it into a plan: <strong>1)</strong> pull last quarter's revenue, <strong>2)</strong> rank and take the top 3, <strong>3)</strong> draft one email per customer. Step 1 goes to a data specialist; step 3 goes to a writer.</p>
+</div>
+<p>The gateway makes model calls cheap, safe, and switchable. But who decides <em>which</em> calls to make? That's the orchestrator: the controller loop that breaks a task into steps, decides which sub-agent or tool handles each step, and stitches the results back together.</p>
+
+<h4>What it does</h4>
+<ul class="tight">
+  <li><strong>Task decomposition</strong> — turn "summarize the team's Q1 sales then email it to the CFO" into a DAG of subtasks. (A <em>DAG</em>, or directed acyclic graph, is just a dependency chart: do these steps first, then this one, with no step looping back on itself.)</li>
+  <li><strong>Routing</strong> — pick which sub-agent (or no sub-agent — just a tool call) handles each step.</li>
+  <li><strong>State machine</strong> — track which steps are done, which are pending, which failed.</li>
+  <li><strong>Loop control</strong> — cap iterations, detect infinite loops, decide when to stop.</li>
+  <li><strong>Result aggregation</strong> — fold partial outputs into the final response.</li>
+</ul>
+
+<h4>Architectural choices to defend</h4>
+<table class="tradeoff">
+  <thead><tr><th>Pattern</th><th>Good for</th><th>Trade-off</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Single agent loop</strong> (ReAct — "reason, then act", repeating)</td><td>Open-ended tasks where the plan emerges</td><td>Less predictable, harder to evaluate per-step</td></tr>
+    <tr><td><strong>Supervisor + workers</strong></td><td>Clear specialization (research / write / review)</td><td>More LLM calls; supervisor bottleneck</td></tr>
+    <tr><td><strong>Static graph / workflow</strong> (LangGraph, Temporal)</td><td>Repeatable, high-volume processes</td><td>Less flexible when inputs vary widely</td></tr>
+    <tr><td><strong>Event-driven</strong> (agents publish/subscribe)</td><td>Many parallel agents, long-running</td><td>Harder to trace causality</td></tr>
+  </tbody>
+</table>
+
+<div class="breaks-if"><strong>What breaks if you forget it:</strong> A single mega-prompt has to do planning, tool selection, execution, and review in one shot. It will be inconsistent, expensive, and impossible to evaluate or improve incrementally.</div>
+
+<div class="companions">
+  <p class="clabel">Companion components that live at the orchestrator</p>
+
+  <div class="companion">
+    <div class="chead"><span class="cname">Durable Execution / Retry Queue</span><span class="sev high">High</span><span class="crole">long-running reliability</span></div>
+    <p>Agents run for seconds; some plans run for minutes or hours. A durable execution engine (Temporal, Inngest, Step Functions, or your own queue + state machine) lets a long plan survive restarts, retry failed steps, and resume from the last successful one. The orchestrator owns the plan, so this is where durability belongs.</p>
+    <p class="cplain"><b>In plain terms:</b> "<em>durable</em>" means the work doesn't vanish if the server restarts mid-task — like a save point in a video game that lets you resume instead of starting over. "<em>Idempotency</em>" is the safety rule that doing the same step twice has the same effect as doing it once, so a retry can't accidentally send the same email or charge a card twice. ("<em>In-flight</em>" just means a request that's currently being worked on.)</p>
+    <p class="cbreak"><b>What breaks without it:</b> every deploy kills every in-flight conversation, a transient tool error aborts the whole task, and there's no idempotency to stop a retry from double-acting.</p>
+  </div>
+
+  <div class="companion">
+    <div class="chead"><span class="cname">Human-in-the-Loop (HITL)</span><span class="sev high">High</span><span class="crole">approval gate</span></div>
+    <p>Some actions need a human: sending external email, executing trades, modifying production data. The orchestrator needs a built-in "request approval" capability that suspends the run, surfaces context to a reviewer, and resumes on approval. This is very hard to bolt on later — design the pause/resume seam in from the start.</p>
+    <p class="cbreak"><b>What breaks without it:</b> risky actions execute autonomously, and a single bad turn translates directly into real-world damage with no chance to intervene.</p>
+  </div>
+</div>
+
+<!-- ============================ STEP 3: SUB-AGENTS ============================ -->
+<h2 id="step3">Step 3 — Sub-agents <span class="sev med">Medium</span></h2>
+<div class="step-header"><span class="step-num">3</span><h3 style="margin:0">Specialization over generalists</h3></div>
+<div class="intuition">
+  <svg class="ibulb" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.45 1 1.15 1.1 1.9l.1.8h4.8l.1-.8c.1-.75.5-1.45 1.1-1.9A6 6 0 0 0 12 3Z" stroke="#7048e8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="ibody">
+    <p class="ihead">Think of it like…</p>
+    <p><em>specialists instead of one overworked generalist</em>. You could ask one brilliant person to research, write, and fact-check a report alone — but you'll get a cleaner, faster result by giving each part to someone who only does that. And the researcher's messy notes never end up cluttering the writer's desk.</p>
+  </div>
+</div>
+<p>Sub-agents are scoped agents the orchestrator delegates to — a "research" agent that's good at the web, a "code" agent with a sandbox, a "review" agent prompted to be skeptical. Each runs in its own context window, with its own tools and its own system prompt.</p>
+
+<div class="grid2">
+  <div class="card good">
+    <h4>Why decompose</h4>
+    <ul class="tight">
+      <li>Smaller, focused prompts beat one giant prompt.</li>
+      <li>Each agent's context stays clean — no tool-call sprawl polluting the planner's window.</li>
+      <li>You can use a cheap model for grunt work and a smart one only where it matters.</li>
+      <li>Failures are isolated: a bad research call doesn't poison the writer's context.</li>
+    </ul>
+  </div>
+  <div class="card warn">
+    <h4>Costs of decomposition</h4>
+    <ul class="tight">
+      <li>Each handoff costs tokens — context has to be re-summarized.</li>
+      <li>Latency adds up: serial sub-agent calls compound.</li>
+      <li>State management is now your problem.</li>
+      <li>Harder to debug: a wrong answer might trace back two agents deep.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="nb"><strong>When is one agent enough?</strong> A single agent is cheaper and simpler for short tasks — don't decompose just because you can. Reach for sub-agents when the task has steps with <em>different tool surfaces</em> and <em>different optimal models</em>. The cost of an extra handoff is paid back the first time the research step fails and you don't want it corrupting the writer's context.</div>
+
+<!-- ============================ STEP 4: TOOL REGISTRY ============================ -->
+<h2 id="step4">Step 4 — The Tool Registry <span class="sev crit">Critical</span></h2>
+<div class="step-header"><span class="step-num">4</span><h3 style="margin:0">Agents don't call tools — they request them</h3></div>
+<div class="intuition">
+  <svg class="ibulb" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.45 1 1.15 1.1 1.9l.1.8h4.8l.1-.8c.1-.75.5-1.45 1.1-1.9A6 6 0 0 0 12 3Z" stroke="#7048e8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="ibody">
+    <p class="ihead">Think of it like…</p>
+    <p>the locked <em>equipment room with a checkout clerk</em>. Staff don't grab the company credit card or the database keys themselves — they hand the clerk a slip ("send this email"), and the clerk checks they're allowed, writes it in the logbook, and performs the action. If someone scribbles "wire $1M to this account," the clerk just refuses.</p>
+  </div>
+</div>
+<p>This is one of the cleanest concepts in agentic design and one of the easiest to get wrong in a first implementation. Agents should never hold credentials or call APIs directly. They emit a structured tool-call intent (<code>{"tool":"send_email","args":{...}}</code>) and a separate <em>tool registry</em> validates, authorizes, executes, and returns the result.</p>
+
+<h4>What the registry provides</h4>
+<ul class="tight">
+  <li><strong>Discovery</strong> — the canonical list of tools the agent can see (filtered by permissions).</li>
+  <li><strong>Schema</strong> — JSON schema for each tool's args and return type. The agent gets this, not raw OpenAPI.</li>
+  <li><strong>Authorization</strong> — does <em>this user</em>, in <em>this context</em>, get to call this tool?</li>
+  <li><strong>Validation</strong> — strict schema check before execution. Reject malformed args; don't ship them downstream.</li>
+  <li><strong>Audit log</strong> — every tool call is logged: who, what, when, with what args, with what result.</li>
+  <li><strong>Idempotency</strong> — keys to prevent double-sends on retries.</li>
+  <li><strong>Sandboxing</strong> — code execution tools run in isolated VMs/containers.</li>
+</ul>
+
+<div class="breaks-if"><strong>What breaks if you forget it:</strong> An agent will, sooner than you'd like, hallucinate a tool call to <code>delete_all_users</code>. Without a registry it goes straight to the API. With one, it's rejected at the boundary and logged for your eval set.</div>
+
+<div class="example">
+  <p class="ehead">In our example</p>
+  <p>The data specialist wants last quarter's revenue, so it hands the clerk a slip: <code>{"tool":"query_sales","args":{"period":"Q-last","metric":"revenue"}}</code>. The clerk checks that <em>this particular user</em> is allowed to read revenue, runs the query, logs it, and returns the rows. The agent never touched the database password — and if it had asked for <code>delete_customers</code>, the clerk would have said no.</p>
+</div>
+
+<div class="nb"><strong>A question worth answering up front:</strong> "How does the agent know what tools exist?" The registry exposes a filtered, permissioned manifest <em>per request</em>, injected into the system prompt as JSON schemas. Tools the user can't access are simply not in the manifest — the agent can't be tempted by what it can't see.</div>
+
+<div class="companions">
+  <p class="clabel">Companion components that live at the tool boundary</p>
+
+  <div class="companion">
+    <div class="chead"><span class="cname">Schema Validator / Output Parser</span><span class="sev med">Medium</span><span class="crole">structured-output gate</span></div>
+    <p>LLMs return strings; tool calls must be structured. A dedicated validation layer (Pydantic, Zod, JSON Schema) catches malformed output <em>before</em> it reaches the registry, paired with a retry-with-error-feedback loop ("your last call was invalid because X — try again"). It sits right in front of the registry as the first check.</p>
+    <p class="cplain"><b>In plain terms:</b> the model replies with free-form text, but a tool needs data in an exact shape (the right fields, the right types) — that shape is a "<em>schema</em>." The validator is the form-checker who rejects an incomplete form and hands it back: "you forgot the recipient, fill it in and resubmit." (<em>Pydantic, Zod, JSON Schema</em> are just popular tools for describing and checking those shapes.)</p>
+    <p class="cbreak"><b>What breaks without it:</b> malformed tool calls slip through to execution, and you end up with brittle string-parsing scattered across the codebase instead of one strict boundary.</p>
+  </div>
+
+  <div class="companion">
+    <div class="chead"><span class="cname">Identity Propagation</span><span class="sev crit">Critical</span><span class="crole">authorization context</span></div>
+    <p>Authorization in the registry must be evaluated against the <em>real</em> user, not the service account. A signed user-context token flows from request entry all the way into the tool registry, so "can this caller use this tool?" is answered against the actual principal.</p>
+    <p class="cplain"><b>In plain terms:</b> the system itself has broad powers (a "<em>service account</em>" — like a master keycard). The actual person making the request usually has fewer. You want each tool call checked against <em>that person's</em> permissions, not the master keycard's. A "<em>signed user-context token</em>" is a tamper-proof ID badge that travels with the request so the clerk knows who's really asking. ("<em>Authorization</em>" = what you're allowed to do; "<em>principal</em>" = the who that's being checked.)</p>
+    <p class="cbreak"><b>What breaks without it:</b> the registry authorizes against the wrong identity — every user effectively inherits the service account's permissions, and one user can trigger tools on another's data.</p>
+  </div>
+</div>
+
+<!-- ============================ STEP 5: MEMORY ============================ -->
+<h2 id="step5">Step 5 — Memory (the question that trips everyone up) <span class="sev med">Medium</span></h2>
+<div class="step-header"><span class="step-num">5</span><h3 style="margin:0">"Where does memory live?"</h3></div>
+<div class="intuition">
+  <svg class="ibulb" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.45 1 1.15 1.1 1.9l.1.8h4.8l.1-.8c.1-.75.5-1.45 1.1-1.9A6 6 0 0 0 12 3Z" stroke="#7048e8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="ibody">
+    <p class="ihead">Think of it like…</p>
+    <p>the <em>four places you keep information at the office</em>. A <strong>sticky note</strong> you throw away after one task (working memory). The <strong>notepad on your desk</strong> for today's project (session memory). The <strong>archive room</strong> of everything the company has ever done (long-term memory). And the <strong>reference library</strong> of manuals you consult but never wrote (knowledge). "Where does memory live?" is really four questions, not one.</p>
+  </div>
+</div>
+<p>This is the question that trips up most people building their first agent. The honest answer is: <em>memory isn't one thing</em>. There are at least four kinds, and they live in different places for different reasons.</p>
+
+<table class="tradeoff">
+  <thead><tr><th>Memory type</th><th>Lifespan</th><th>Lives at</th><th>Backed by</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Working memory</strong> (the current context window)</td><td>One turn</td><td>Inside the agent</td><td>The LLM's context — nothing else needed</td></tr>
+    <tr><td><strong>Session memory</strong> (the current conversation/thread)</td><td>Minutes to hours</td><td>Orchestrator-level, scoped by session ID</td><td>Redis / in-memory KV, plus periodic flush to durable store</td></tr>
+    <tr><td><strong>Long-term episodic</strong> (past interactions, summaries)</td><td>Forever</td><td>Centralized memory service</td><td>SQL/document DB + vector store for semantic recall</td></tr>
+    <tr><td><strong>Knowledge / semantic memory</strong> (your docs, your data)</td><td>Forever, updated by ingestion</td><td>Retrieval service (RAG)</td><td>Vector store + lexical index + source-of-truth DB</td></tr>
+  </tbody>
+</table>
+
+<h3>Centralized vs. distributed: how to actually decide</h3>
+<p>The natural follow-up is "why not keep memory at the sub-agent level instead?" Here's the framework for deciding:</p>
+
+<div class="diagram">
+  <svg viewBox="0 0 920 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Centralized vs distributed memory comparison">
+    <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#586073"/></marker></defs>
+    <g font-family="Inter, sans-serif" font-size="12" fill="#1a1e28">
+      <!-- Left: centralized -->
+      <text x="220" y="24" text-anchor="middle" font-weight="600" fill="#167a4e">Centralized memory</text>
+      <text x="220" y="42" text-anchor="middle" fill="#586073" font-size="11">consistency, single source of truth</text>
+      <rect x="160" y="60"  width="120" height="40" rx="8" fill="#ffffff" stroke="#c2cce0"/><text x="220" y="84" text-anchor="middle">Orchestrator</text>
+      <rect x="60"  y="140" width="120" height="40" rx="8" fill="#ffffff" stroke="#c2cce0"/><text x="120" y="164" text-anchor="middle">Sub-agent A</text>
+      <rect x="260" y="140" width="120" height="40" rx="8" fill="#ffffff" stroke="#c2cce0"/><text x="320" y="164" text-anchor="middle">Sub-agent B</text>
+      <rect x="140" y="220" width="160" height="40" rx="8" fill="#e8edff" stroke="#167a4e" stroke-width="2"/><text x="220" y="244" text-anchor="middle">Memory service</text>
+      <line x1="220" y1="100" x2="220" y2="135" stroke="#586073" marker-end="url(#arr2)"/>
+      <line x1="120" y1="180" x2="200" y2="220" stroke="#586073" marker-end="url(#arr2)"/>
+      <line x1="320" y1="180" x2="240" y2="220" stroke="#586073" marker-end="url(#arr2)"/>
+
+      <!-- Right: distributed -->
+      <text x="700" y="24" text-anchor="middle" font-weight="600" fill="#b5630c">Distributed memory</text>
+      <text x="700" y="42" text-anchor="middle" fill="#586073" font-size="11">speed, locality, isolation</text>
+      <rect x="640" y="60"  width="120" height="40" rx="8" fill="#ffffff" stroke="#c2cce0"/><text x="700" y="84" text-anchor="middle">Orchestrator</text>
+      <rect x="540" y="140" width="120" height="40" rx="8" fill="#ffffff" stroke="#c2cce0"/><text x="600" y="164" text-anchor="middle">Sub-agent A</text>
+      <rect x="740" y="140" width="120" height="40" rx="8" fill="#ffffff" stroke="#c2cce0"/><text x="800" y="164" text-anchor="middle">Sub-agent B</text>
+      <rect x="540" y="210" width="120" height="38" rx="8" fill="#e8edff" stroke="#b5630c"/><text x="600" y="233" text-anchor="middle">Memory A</text>
+      <rect x="740" y="210" width="120" height="38" rx="8" fill="#e8edff" stroke="#b5630c"/><text x="800" y="233" text-anchor="middle">Memory B</text>
+      <line x1="700" y1="100" x2="700" y2="135" stroke="#586073" marker-end="url(#arr2)"/>
+      <line x1="600" y1="180" x2="600" y2="208" stroke="#586073" marker-end="url(#arr2)"/>
+      <line x1="800" y1="180" x2="800" y2="208" stroke="#586073" marker-end="url(#arr2)"/>
+    </g>
+  </svg>
+  <div class="caption">Figure 5 — Centralized memory keeps agents on the same page; distributed memory keeps them fast. You almost always need both.</div>
+</div>
+
+<div class="grid2">
+  <div class="card good">
+    <h4>Centralized memory wins on…</h4>
+    <ul class="tight">
+      <li>Consistency — all sub-agents see the same facts.</li>
+      <li>Cross-session learning — you can build a single user-profile store.</li>
+      <li>Auditability — one place to inspect, GDPR-delete, and govern.</li>
+      <li>Cheap dedup — write once, read many.</li>
+    </ul>
+  </div>
+  <div class="card warn">
+    <h4>Distributed memory wins on…</h4>
+    <ul class="tight">
+      <li>Latency — agents read their own scratchpad locally.</li>
+      <li>Blast radius — a corrupted scratchpad doesn't poison the whole system.</li>
+      <li>Specialization — each agent's memory schema can be tailored.</li>
+      <li>Concurrency — no write contention on shared state.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="nb"><strong>The real answer:</strong> Hybrid. Sub-agents get short-lived <em>scratchpad memory</em> for their reasoning trace. The orchestrator owns a <em>canonical memory service</em> for facts, summaries, and cross-session state. The scratchpad is throwaway; the canonical store is the source of truth. The reason you want both comes down to one idea: <em>different consistency requirements at different timescales.</em></div>
+
+<!-- ============================ STEP 6: VECTOR STORE ============================ -->
+<h2 id="step6">Step 6 — Vector Store &amp; Retrieval <span class="sev med">Medium</span></h2>
+<div class="step-header"><span class="step-num">6</span><h3 style="margin:0">Why the vector store is not the memory</h3></div>
+<div class="intuition">
+  <svg class="ibulb" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.45 1 1.15 1.1 1.9l.1.8h4.8l.1-.8c.1-.75.5-1.45 1.1-1.9A6 6 0 0 0 12 3Z" stroke="#7048e8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="ibody">
+    <p class="ihead">Think of it like…</p>
+    <p>a <em>librarian who understands meaning</em>, sitting next to the old card catalog. The card catalog finds exact words ("documents containing <code>DC-4421</code>") and is perfect for IDs and codes. The librarian finds <em>ideas</em> ("articles about reducing customer churn") even when those exact words appear nowhere. You keep both — and the librarian is just one helper in the library, not the whole filing system.</p>
+  </div>
+</div>
+<div class="nb"><strong>First, two terms:</strong> <em>Retrieval</em> means looking up relevant information and pasting it into the model's prompt so it can answer using your data instead of guessing. That pattern has a name — <strong>RAG</strong>, "retrieval-augmented generation": <em>retrieve</em> the right documents, then let the model <em>generate</em> an answer grounded in them. A <strong>vector store</strong> is the database that powers the "meaning-based" half of that lookup. (Storing text as <em>vectors</em> — long lists of numbers that capture meaning — is what lets a computer find passages that are <em>about</em> the same thing, even with no shared words.)</div>
+
+<p>A common confusion: people treat "vector store" and "memory" as the same thing. They're not. The vector store is one <em>storage option</em> the memory service can use — specifically for meaning-based lookup of text snippets. Your structured user profile lives in a regular database (e.g. Postgres). Your conversation history lives in a fast key-value store (a <em>KV</em> store: simple "look up a value by its key," like a dictionary). Your document snippets live in the vector store. Different data, different homes.</p>
+
+<h4>What lives in the retrieval layer</h4>
+<ul class="tight">
+  <li><strong>Vector index</strong> — for semantic similarity (FAISS, pgvector, Pinecone, Weaviate, etc.).</li>
+  <li><strong>Lexical index</strong> — exact-keyword search (BM25 is the classic algorithm). "Hybrid" search (meaning-based + keyword-based together) beats meaning-based alone for proper nouns, IDs, and exact phrases.</li>
+  <li><strong>Reranker</strong> — a small model that re-orders top-K results by relevance. Cheap and dramatically improves precision.</li>
+  <li><strong>Source-of-truth store</strong> — the original documents. Vectors are derived; never authoritative.</li>
+  <li><strong>Ingestion pipeline</strong> — chunking, embedding, metadata extraction. Separate from query path.</li>
+</ul>
+
+<div class="breaks-if"><strong>What breaks if you forget the lexical index:</strong> Your agent will fail on queries like "find ticket DC-4421" or "look up SKU 88-XR-12". Embeddings smear identifiers across similar-looking strings. Hybrid retrieval is the default; pure vector is a special case.</div>
+
+<div class="nb"><strong>Easy to overlook:</strong> "How do you keep the vector store fresh?" The ingestion pipeline is a separate, async system with its own observability — not an afterthought bolted onto the write path. Index drift is a real production failure mode, so treat it as more than "just upsert on write."</div>
+
+<!-- ============================ STEP 7: GUARDRAILS ============================ -->
+<h2 id="step7">Step 7 — Guardrails (input + output) <span class="sev crit">Critical</span></h2>
+<div class="step-header"><span class="step-num">7</span><h3 style="margin:0">Two boxes, not one</h3></div>
+<div class="intuition">
+  <svg class="ibulb" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.45 1 1.15 1.1 1.9l.1.8h4.8l.1-.8c.1-.75.5-1.45 1.1-1.9A6 6 0 0 0 12 3Z" stroke="#7048e8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="ibody">
+    <p class="ihead">Think of it like…</p>
+    <p><em>security at the door</em> and <em>the mailroom reviewing outgoing letters</em>. The door screens who and what comes in. The mailroom checks every letter before it's sealed. They're different jobs for a reason: the door can't catch a reply that accidentally includes a customer's bank details — only the mailroom, reading what's about to leave, can.</p>
+  </div>
+</div>
+<p>"Guardrails" is usually treated as one component. It's actually two — input guardrails and output guardrails — and collapsing them into one is the clearest sign a system hasn't been run in production yet.</p>
+
+<table class="tradeoff">
+  <thead><tr><th>Input guardrails (before the agent)</th><th>Output guardrails (before the response leaves)</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>
+        <ul class="tight">
+          <li>Prompt-injection detection</li>
+          <li>PII redaction / classification</li>
+          <li>Topic / policy classifier (off-topic, abusive)</li>
+          <li>Rate limit per user / tenant</li>
+          <li>Jailbreak attempt detection</li>
+          <li>Input length and budget limits</li>
+        </ul>
+      </td>
+      <td>
+        <ul class="tight">
+          <li>PII / secret leak detection in responses</li>
+          <li>Toxicity / policy classifier on output</li>
+          <li>Schema / format validation</li>
+          <li>Hallucination check (does the answer cite sources from retrieval?)</li>
+          <li>Tool-call argument validation (caught here too, defensively)</li>
+          <li>Confidence / refusal handoff to human</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="breaks-if"><strong>What breaks if you skip output guardrails:</strong> Your agent will, on some unlucky Tuesday, quote a customer's social security number back to a different customer because it appeared in retrieved context. Input guardrails wouldn't have caught it. Output guardrails do.</div>
+
+<div class="example">
+  <p class="ehead">In our example</p>
+  <p>The writer produces three thank-you emails. Before anything leaves, the mailroom checks them: no other customer's private numbers slipped in, the tone matches policy, and — crucially — these are <em>drafts</em>. They are <strong>not</strong> auto-sent to real customers; they wait for a human to approve (that's the Human-in-the-Loop gate from Step 2). The system did the heavy lifting; a person presses send.</p>
+</div>
+
+<div class="nb"><strong>Where they go:</strong> Place input guardrails <em>before</em> the orchestrator, and output guardrails <em>between the orchestrator and the response sink</em>. Both should be implemented as their own pipeline of small, fast classifiers — not one giant LLM call (which is slow and ironically vulnerable to the same injections it's supposed to catch).</div>
+
+<!-- ============================ STEP 8: OBSERVABILITY ============================ -->
+<h2 id="step8">Step 8 — Observability <span class="sev high">High</span></h2>
+<div class="step-header"><span class="step-num">8</span><h3 style="margin:0">If you can't see it, you can't ship it</h3></div>
+<div class="intuition">
+  <svg class="ibulb" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.45 1 1.15 1.1 1.9l.1.8h4.8l.1-.8c.1-.75.5-1.45 1.1-1.9A6 6 0 0 0 12 3Z" stroke="#7048e8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="ibody">
+    <p class="ihead">Think of it like…</p>
+    <p>the office <em>CCTV plus the accountant</em>. The cameras record who did what and in what order, so when something goes wrong you replay the tape instead of guessing. The accountant tracks every dollar, so a runaway cost shows up on a dashboard today — not as a nasty surprise at month-end.</p>
+  </div>
+</div>
+<p>Standard ops observability (metrics, logs, traces) doesn't cut it for agents. You need three layers:</p>
+
+<ol style="color:var(--ink-dim)">
+  <li><strong>Infrastructure metrics</strong> — latency, error rates, throughput, per-service. Same as any system.</li>
+  <li><strong>LLM-specific telemetry</strong> — tokens in/out, cost per request, model used, cache hit/miss, retries, failover events.</li>
+  <li><strong>Agent traces</strong> — the <em>decision tree</em>: every prompt, every tool call, every sub-agent invocation, every guardrail verdict, with parent/child relationships. This is what lets you debug "why did it do that?"</li>
+</ol>
+
+<h4>What it costs to omit each layer</h4>
+<ul class="tight">
+  <li>No infra metrics → you find out from users when the API is down.</li>
+  <li>No LLM telemetry → you find out from the credit card bill.</li>
+  <li>No agent traces → you find out from the postmortem, six hours late.</li>
+</ul>
+
+<div class="nb"><strong>Trace structure to mention by name:</strong> OpenTelemetry spans, with one span per logical step (orchestrator iteration, sub-agent invocation, gateway call, tool call). Tag spans with <code>session_id</code>, <code>user_id</code>, <code>model</code>, <code>tokens</code>, <code>cost_usd</code>. Tools like LangSmith, Arize, Helicone, Langfuse, or your own Honeycomb pipeline consume these.</div>
+
+<div class="companions">
+  <p class="clabel">Companion component that closes the observability loop</p>
+
+  <div class="companion">
+    <div class="chead"><span class="cname">Eval &amp; Feedback Loop</span><span class="sev high">High</span><span class="crole">measurable iteration</span></div>
+    <p>The single biggest gap in most agentic systems. You can't iterate on an agent you can't measure. The eval system needs a curated golden test set, a way to run it on every new version, automated scorers (LLM-as-judge plus deterministic checks), and a dashboard. Wire it to your production traces so real failures become new test cases — that's the feedback loop.</p>
+    <p class="cplain"><b>In plain terms:</b> an "<em>eval</em>" (evaluation) is a test for your agent, just like a unit test for code. A "<em>golden set</em>" is a collection of example questions with known-good answers you check against. Some answers are easy to grade automatically (did it return the right number?); for fuzzy ones like email tone, you use another model as the grader — that's "<em>LLM-as-judge</em>." The "<em>feedback loop</em>" means real mistakes from production get added to the test set so the same bug can't sneak back.</p>
+    <p class="cbreak"><b>What breaks without it:</b> every prompt or model change is a vibes-based commit. You can't tell whether a "fix" regressed something else, and you ship on faith.</p>
+  </div>
+</div>
+
+<!-- ============================ BIG PICTURE ============================ -->
+<h2 id="forgotten">The big picture: every component in one map</h2>
+<p>We built the system one step at a time, weaving each companion component into the step it belongs to. Here's the whole thing in a single view, organized by the seven-stop mental model from <a href="#mental-model">Figure 1</a>. This is the map to hold in your head: each stop, the components that live there, and how badly you'll miss each one.</p>
+
+<table class="tradeoff">
+  <thead><tr><th>Lifecycle stop</th><th>Components that live here</th><th>Severity</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>1 · Entry &amp; identity</strong></td>
+      <td>API gateway (authn, rate limit) · Identity propagation · Secrets manager</td>
+      <td><span class="sev crit">Critical</span></td>
+    </tr>
+    <tr>
+      <td><strong>2 · Safety in</strong></td>
+      <td>Input guardrails (injection, PII, policy) · Data-plane / privacy routing</td>
+      <td><span class="sev crit">Critical</span></td>
+    </tr>
+    <tr>
+      <td><strong>3 · Routing &amp; planning</strong></td>
+      <td>LLM gateway · Cost / budget router · Caching · Prompt &amp; model version registry</td>
+      <td><span class="sev high">High</span> <span class="sev med">+ Med</span></td>
+    </tr>
+    <tr>
+      <td><strong>4 · Reasoning</strong></td>
+      <td>Orchestrator · Sub-agents · Durable execution / retry queue · Human-in-the-loop</td>
+      <td><span class="sev high">High</span></td>
+    </tr>
+    <tr>
+      <td><strong>5 · Action</strong></td>
+      <td>Tool registry · Schema validator / output parser · Sandboxes &amp; external APIs</td>
+      <td><span class="sev crit">Critical</span></td>
+    </tr>
+    <tr>
+      <td><strong>6 · Memory</strong></td>
+      <td>Memory service (session + episodic) · Vector + lexical index · Source-of-truth DB</td>
+      <td><span class="sev med">Medium</span></td>
+    </tr>
+    <tr>
+      <td><strong>7 · Safety out &amp; observe</strong></td>
+      <td>Output guardrails · Traces / metrics / cost telemetry · Eval &amp; feedback loop</td>
+      <td><span class="sev crit">Critical</span> <span class="sev high">+ High</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="nb"><strong>How to read this map:</strong> the components named in the original eight steps form the visible spine; the companions woven into each step (cost router, caching, prompt registry, durable execution, HITL, schema validator, identity, secrets, data-plane isolation, eval loop) are what turn a working demo into a system that survives production. None of them are optional forever — they're ordered by how soon their absence will hurt you.</div>
+
+<!-- FULL ARCHITECTURE DIAGRAM -->
+<h3>The full architecture</h3>
+<div class="diagram">
+  <svg viewBox="0 0 1100 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Full production agentic architecture">
+    <defs>
+      <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#586073"/></marker>
+      <linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#3b5bdb"/><stop offset="1" stop-color="#7048e8"/></linearGradient>
+    </defs>
+    <style>
+      .lbl  { font-family: Inter, sans-serif; font-size: 12px; fill: #1a1e28; }
+      .sub  { font-family: Inter, sans-serif; font-size: 10px; fill: #586073; }
+      .hdr  { font-family: Inter, sans-serif; font-size: 11px; fill: #586073; letter-spacing: 0.05em; }
+      .box  { fill: #ffffff; stroke: #c2cce0; }
+      .core { fill: #e8edff; stroke: url(#g1); stroke-width: 2; }
+      .ok   { fill: #e8edff; stroke: #167a4e; stroke-width: 1.5; }
+      .warn { fill: #e8edff; stroke: #b5630c; stroke-width: 1.5; }
+      .bad  { fill: #e8edff; stroke: #cc2f2f; stroke-width: 1.5; }
+      .ln   { stroke: #6b7385; stroke-width: 1.2; fill: none; }
+    </style>
+
+    <!-- Lane labels -->
+    <text x="20" y="40"  class="hdr">ENTRY</text>
+    <text x="20" y="170" class="hdr">SAFETY</text>
+    <text x="20" y="300" class="hdr">REASONING</text>
+    <text x="20" y="500" class="hdr">ACTION &amp; MEMORY</text>
+    <text x="20" y="650" class="hdr">OBSERVE</text>
+
+    <!-- Entry -->
+    <rect x="100" y="20" width="130" height="44" rx="8" class="box"/><text x="165" y="46" class="lbl" text-anchor="middle">User / Client</text>
+    <rect x="260" y="20" width="140" height="44" rx="8" class="box"/><text x="330" y="40" class="lbl" text-anchor="middle">API Gateway</text><text x="330" y="55" class="sub" text-anchor="middle">authn · rate limit</text>
+    <rect x="430" y="20" width="160" height="44" rx="8" class="box"/><text x="510" y="40" class="lbl" text-anchor="middle">Identity / Secrets</text><text x="510" y="55" class="sub" text-anchor="middle">signed context · vault</text>
+
+    <!-- Safety in -->
+    <rect x="100" y="150" width="170" height="50" rx="8" class="bad"/><text x="185" y="170" class="lbl" text-anchor="middle">Input Guardrails</text><text x="185" y="186" class="sub" text-anchor="middle">PII · injection · policy</text>
+
+    <!-- Reasoning -->
+    <rect x="300" y="280" width="220" height="60" rx="10" class="core"/><text x="410" y="304" class="lbl" text-anchor="middle" font-weight="600">Orchestrator</text><text x="410" y="322" class="sub" text-anchor="middle">plan · route · loop · state</text>
+
+    <rect x="560" y="240" width="180" height="44" rx="8" class="box"/><text x="650" y="260" class="lbl" text-anchor="middle">LLM Gateway</text><text x="650" y="275" class="sub" text-anchor="middle">routing · cost · cache</text>
+    <rect x="770" y="240" width="160" height="44" rx="8" class="box"/><text x="850" y="260" class="lbl" text-anchor="middle">Model Providers</text><text x="850" y="275" class="sub" text-anchor="middle">multi-vendor · OSS</text>
+
+    <rect x="560" y="300" width="180" height="40" rx="8" class="box"/><text x="650" y="324" class="lbl" text-anchor="middle">Prompt Registry</text>
+    <rect x="770" y="300" width="160" height="40" rx="8" class="box"/><text x="850" y="324" class="lbl" text-anchor="middle">Schema Validator</text>
+
+    <rect x="100" y="380" width="140" height="44" rx="8" class="box"/><text x="170" y="404" class="lbl" text-anchor="middle">Sub-agent: Research</text>
+    <rect x="260" y="380" width="140" height="44" rx="8" class="box"/><text x="330" y="404" class="lbl" text-anchor="middle">Sub-agent: Writer</text>
+    <rect x="420" y="380" width="140" height="44" rx="8" class="box"/><text x="490" y="404" class="lbl" text-anchor="middle">Sub-agent: Reviewer</text>
+    <rect x="580" y="380" width="160" height="44" rx="8" class="warn"/><text x="660" y="400" class="lbl" text-anchor="middle">HITL Approval</text><text x="660" y="416" class="sub" text-anchor="middle">pause · review · resume</text>
+
+    <!-- Action -->
+    <rect x="100" y="480" width="170" height="48" rx="8" class="ok"/><text x="185" y="500" class="lbl" text-anchor="middle">Tool Registry</text><text x="185" y="516" class="sub" text-anchor="middle">authz · schema · audit</text>
+    <rect x="290" y="480" width="140" height="44" rx="8" class="box"/><text x="360" y="504" class="lbl" text-anchor="middle">External APIs</text>
+    <rect x="450" y="480" width="140" height="44" rx="8" class="box"/><text x="520" y="504" class="lbl" text-anchor="middle">Code Sandbox</text>
+    <rect x="610" y="480" width="140" height="44" rx="8" class="box"/><text x="680" y="504" class="lbl" text-anchor="middle">Internal Systems</text>
+
+    <!-- Memory -->
+    <rect x="780" y="380" width="160" height="44" rx="8" class="box"/><text x="860" y="400" class="lbl" text-anchor="middle">Memory Service</text><text x="860" y="416" class="sub" text-anchor="middle">session · episodic</text>
+    <rect x="780" y="440" width="160" height="40" rx="8" class="box"/><text x="860" y="464" class="lbl" text-anchor="middle">Vector + Lexical Index</text>
+    <rect x="780" y="490" width="160" height="40" rx="8" class="box"/><text x="860" y="514" class="lbl" text-anchor="middle">SQL / Source of Truth</text>
+
+    <!-- Safety out -->
+    <rect x="300" y="560" width="220" height="44" rx="8" class="bad"/><text x="410" y="580" class="lbl" text-anchor="middle">Output Guardrails</text><text x="410" y="596" class="sub" text-anchor="middle">PII leak · hallucination · policy</text>
+
+    <!-- Observe -->
+    <rect x="100" y="630" width="170" height="44" rx="8" class="box"/><text x="185" y="654" class="lbl" text-anchor="middle">Traces (OTel)</text>
+    <rect x="290" y="630" width="170" height="44" rx="8" class="box"/><text x="375" y="654" class="lbl" text-anchor="middle">Metrics &amp; Cost</text>
+    <rect x="480" y="630" width="170" height="44" rx="8" class="box"/><text x="565" y="654" class="lbl" text-anchor="middle">Eval Harness</text>
+    <rect x="670" y="630" width="170" height="44" rx="8" class="box"/><text x="755" y="654" class="lbl" text-anchor="middle">Feedback Loop</text>
+    <rect x="860" y="630" width="170" height="44" rx="8" class="box"/><text x="945" y="654" class="lbl" text-anchor="middle">Durable Queue</text>
+
+    <!-- Lines -->
+    <line x1="230" y1="42" x2="260" y2="42" class="ln" marker-end="url(#arr3)"/>
+    <line x1="400" y1="42" x2="430" y2="42" class="ln" marker-end="url(#arr3)"/>
+    <line x1="185" y1="64" x2="185" y2="150" class="ln" marker-end="url(#arr3)"/>
+    <line x1="185" y1="200" x2="300" y2="280" class="ln" marker-end="url(#arr3)"/>
+    <line x1="520" y1="310" x2="560" y2="262" class="ln" marker-end="url(#arr3)"/>
+    <line x1="740" y1="262" x2="770" y2="262" class="ln" marker-end="url(#arr3)"/>
+    <line x1="410" y1="340" x2="170" y2="380" class="ln" marker-end="url(#arr3)"/>
+    <line x1="410" y1="340" x2="330" y2="380" class="ln" marker-end="url(#arr3)"/>
+    <line x1="410" y1="340" x2="490" y2="380" class="ln" marker-end="url(#arr3)"/>
+    <line x1="520" y1="340" x2="660" y2="380" class="ln" marker-end="url(#arr3)"/>
+    <line x1="170" y1="424" x2="185" y2="480" class="ln" marker-end="url(#arr3)"/>
+    <line x1="330" y1="424" x2="250" y2="480" class="ln" marker-end="url(#arr3)"/>
+    <line x1="490" y1="424" x2="250" y2="480" class="ln" marker-end="url(#arr3)"/>
+    <line x1="270" y1="504" x2="290" y2="504" class="ln" marker-end="url(#arr3)"/>
+    <line x1="270" y1="510" x2="450" y2="510" class="ln" marker-end="url(#arr3)"/>
+    <line x1="270" y1="516" x2="610" y2="516" class="ln" marker-end="url(#arr3)"/>
+    <line x1="660" y1="380" x2="780" y2="402" class="ln" marker-end="url(#arr3)"/>
+    <line x1="860" y1="424" x2="860" y2="440" class="ln"/>
+    <line x1="860" y1="480" x2="860" y2="490" class="ln"/>
+    <line x1="410" y1="340" x2="410" y2="560" class="ln" marker-end="url(#arr3)"/>
+    <line x1="410" y1="604" x2="185" y2="630" class="ln" marker-end="url(#arr3)"/>
+    <line x1="410" y1="604" x2="375" y2="630" class="ln" marker-end="url(#arr3)"/>
+    <line x1="410" y1="604" x2="565" y2="630" class="ln" marker-end="url(#arr3)"/>
+    <line x1="410" y1="604" x2="755" y2="630" class="ln" marker-end="url(#arr3)"/>
+    <line x1="410" y1="340" x2="945" y2="630" class="ln" stroke-dasharray="3 3"/>
+  </svg>
+  <div class="caption">Figure 6 — The full production picture. Lane = lifecycle stop. Colored borders = component role (green: action gate, orange: human/cost gate, red: safety, gradient: core orchestrator).</div>
+</div>
+
+<!-- ============================ FAILURE MODES ============================ -->
+<h2 id="failures">Failure-mode catalog: what breaks if you remove each piece</h2>
+<p>The fastest way to reason about whether a component earns its place is to know exactly what fails without it. Use this as a reference while you build.</p>
+
+<table class="tradeoff">
+  <thead><tr><th>Component</th><th>What breaks without it</th><th>Severity</th></tr></thead>
+  <tbody>
+    <tr><td>LLM Gateway</td><td>Provider lock-in; no cost visibility; provider outage = product outage</td><td><span class="sev high">High</span></td></tr>
+    <tr><td>Orchestrator</td><td>One giant prompt does planning + execution + review; inconsistent, expensive, unevaluable</td><td><span class="sev high">High</span></td></tr>
+    <tr><td>Sub-agents</td><td>Context pollution; no specialization; smart-model costs paid on grunt work</td><td><span class="sev med">Medium</span></td></tr>
+    <tr><td>Tool Registry</td><td>Hallucinated tool calls execute; no authz, no audit; security incident waiting to happen</td><td><span class="sev crit">Critical</span></td></tr>
+    <tr><td>Memory Service</td><td>No cross-turn memory; users repeat themselves; no personalization</td><td><span class="sev med">Medium</span></td></tr>
+    <tr><td>Vector + Lexical Index</td><td>RAG silently degrades on IDs/codes; bad retrievals cause hallucination</td><td><span class="sev med">Medium</span></td></tr>
+    <tr><td>Input Guardrails</td><td>Prompt injection works; PII leaves your zone; abuse goes unfiltered</td><td><span class="sev crit">Critical</span></td></tr>
+    <tr><td>Output Guardrails</td><td>PII leaks out; format violations crash downstream; hallucinations shipped</td><td><span class="sev crit">Critical</span></td></tr>
+    <tr><td>Observability</td><td>Cannot debug, cannot improve, cannot triage incidents</td><td><span class="sev high">High</span></td></tr>
+    <tr><td>Eval Harness</td><td>Every change is vibes; regressions ship silently</td><td><span class="sev high">High</span></td></tr>
+    <tr><td>Prompt Registry</td><td>No rollback when a prompt edit goes bad; no A/B testing; no auditability</td><td><span class="sev med">Medium</span></td></tr>
+    <tr><td>Schema Validator</td><td>Malformed tool calls reach the registry; brittle string parsing everywhere</td><td><span class="sev med">Medium</span></td></tr>
+    <tr><td>Identity / Secrets</td><td>Authorization decisions made on the wrong principal; keys leak to clients</td><td><span class="sev crit">Critical</span></td></tr>
+    <tr><td>HITL</td><td>Risky actions execute autonomously; one bad turn = real-world damage</td><td><span class="sev high">High</span></td></tr>
+    <tr><td>Cost Router</td><td>Premium model on every classification; bill blow-up</td><td><span class="sev med">Medium</span></td></tr>
+    <tr><td>Durable Execution</td><td>Long-running plans die on every deploy; no retries; no idempotency</td><td><span class="sev high">High</span></td></tr>
+    <tr><td>Caching</td><td>Repeated identical queries cost full price each time; latency stays high</td><td><span class="sev low">Low–Medium</span></td></tr>
+  </tbody>
+</table>
+
+<!-- ============================ BUILD SEQUENCE ============================ -->
+<h2 id="playbook">A build sequence you can follow</h2>
+<p>You don't build all of this at once, and you shouldn't. Here's a sensible order to implement the system, where each phase delivers something runnable and sets up the next. Start two questions ahead of any code:</p>
+<ul class="tight">
+  <li><strong>What's the use case?</strong> An open-ended assistant and a fixed workflow lead to very different orchestrators.</li>
+  <li><strong>What scale are you targeting?</strong> An internal tool for 100 users and a multi-tenant SaaS for 100K justify very different investments in the gateway, identity, and durability layers.</li>
+</ul>
+<p>A reasonable default for anything externally exposed: assume multi-tenant, multi-model, and build progressively from the naive baseline, justifying every component before you add it.</p>
+
+<h4>Phase 1 · Lay the spine</h4>
+<p>Gateway → Orchestrator → Sub-agents → Tool Registry. This is the load-bearing structure; get it working end-to-end before adding anything else. At the end of this phase you have an agent that can plan, delegate, and act through a controlled boundary.</p>
+
+<h4>Phase 2 · Add memory and retrieval</h4>
+<p>Be explicit about the four kinds of memory. Working memory is the LLM context. Session memory lives at the orchestrator. Episodic and knowledge memory live in a separate service backed by a hybrid vector + lexical index. Keep them separate because they have different consistency, latency, and lifecycle needs — that separation is what makes the centralized-vs-distributed decision easy to reason about later.</p>
+
+<h4>Phase 3 · Add safety and observability</h4>
+<p>Input guardrails before the orchestrator; output guardrails before the response sink. Three layers of observability: infra metrics, LLM telemetry, and agent traces (OpenTelemetry spans, one per logical step). Do this before you scale traffic, not after the first incident.</p>
+
+<h4>Phase 4 · Add the commonly-skipped components</h4>
+<p>Eval harness, prompt registry, schema validator, secrets/identity, HITL, cost router, durable execution. None of these are urgent on day one, which is exactly why they get skipped — and why retrofitting them hurts. Plan for them early even if you implement them later.</p>
+
+<h4>Phase 5 · Revisit the trade-offs</h4>
+<p>Once the system runs, revisit the two decisions that matter most: where memory lives (centralized vs. distributed) and which orchestrator pattern fits your workload (supervisor vs. graph vs. event-driven). These are the levers you'll actually tune as usage grows.</p>
+
+<div class="card info">
+  <h4>The principle that holds the whole thing together</h4>
+  <p style="color:var(--ink); margin: 6px 0 0"><em>Every component exists because something specific would break without it.</em></p>
+  <p style="color:var(--ink-dim); margin: 8px 0 0">If you can't name the failure a component prevents, you don't understand it well enough yet — and you may not need it yet either. Knowing what each piece does isn't enough. You need to know why it connects where it does, what breaks if you move it, and what you gain and lose either way.</p>
+</div>
+
+<h3>Common questions, answered</h3>
+<table class="tradeoff">
+  <thead><tr><th>Question</th><th>Answer</th></tr></thead>
+  <tbody>
+    <tr><td>Why a gateway and not direct SDK calls?</td><td>Routing, retries, cost, and provider failover are cross-cutting concerns. One extra hop is cheaper than refactoring every service the day you add or swap a model.</td></tr>
+    <tr><td>Where does memory live?</td><td>Four kinds, three locations. Working memory = context window. Session memory = orchestrator. Episodic + knowledge = a dedicated memory service backed by vector + lexical + SQL. The driver is different consistency requirements at different timescales.</td></tr>
+    <tr><td>Why not let agents call APIs directly?</td><td>Then authorization and audit happen in N places instead of one. The tool registry is the security boundary; agents emit intents, not calls.</td></tr>
+    <tr><td>Can't one big LLM call do all this?</td><td>It can — until the first regression. Without decomposition you can't evaluate, swap, or improve any single step. The cost of an extra call is paid back the first week in production.</td></tr>
+    <tr><td>How do you handle a model deprecation?</td><td>The gateway pins model versions, the prompt registry pins prompt versions, and the eval harness re-runs the golden set against the new model before traffic shifts. Roll back along the same path.</td></tr>
+    <tr><td>What's the biggest risk in this design?</td><td>The gateway is a chokepoint — if it's down, everything's down. Run it active-active across regions and keep the client library able to bypass it behind a feature flag for the worst case.</td></tr>
+  </tbody>
+</table>
+
+<h3>The one idea to take away</h3>
+<p>Knowing what each component does is the easy part. The decisions — where each piece lives, why it lives there, what trade-off you accepted, and what breaks if you move it — are the hard part, and the part that separates a system that demos from a system that survives production.</p>
+<p>Build it once, slowly. Internalize the spine: <em>gateway → orchestrator → sub-agents → tools → memory + retrieval → guardrails → observability → evals</em>. Pair each component with the failure it prevents, and the whole architecture stops being a pile of boxes and starts being a set of decisions you understand.</p>
+
+<h2 id="glossary">Plain-English glossary</h2>
+<p>Every term and abbreviation used in this tutorial, explained simply. Skim it first if you're new, or use it as a lookup as you read.</p>
+
+<h4>Core building blocks</h4>
+<div class="glossary"><dl>
+  <dt>Agent / Agentic system</dt>
+  <dd>Software that uses a language model to <em>decide and act</em> — not just answer a question, but plan steps, call tools, and work toward a goal. "Agentic" just means "behaves like an agent that takes actions."</dd>
+
+  <dt>LLM <span class="term-abbr">Large Language Model</span></dt>
+  <dd>The AI model that reads and writes text (the thing that powers a chatbot). It predicts text; it has no memory or tools of its own — everything else in this tutorial exists to give it those.</dd>
+
+  <dt>Prompt</dt>
+  <dd>The text instructions you send the model. Wording changes behavior a lot, which is why prompts get versioned like code.</dd>
+
+  <dt>Token</dt>
+  <dd>The unit models read and bill in — roughly ¾ of a word. "Cost per token" is why long prompts and big models get expensive.</dd>
+
+  <dt>Context window</dt>
+  <dd>The model's short-term working space — how much text it can "see" at once. Anything outside it must be fetched and pasted back in.</dd>
+
+  <dt>LLM Gateway</dt>
+  <dd>A single internal service that all model calls go through, handling routing, retries, cost tracking, and provider keys. The office <em>switchboard</em>.</dd>
+
+  <dt>Orchestrator</dt>
+  <dd>The controller that breaks a request into steps and decides who handles each. The <em>project manager</em>.</dd>
+
+  <dt>Sub-agent</dt>
+  <dd>A smaller, specialized agent the orchestrator delegates to (e.g. a "research" agent). A <em>specialist employee</em>.</dd>
+
+  <dt>Tool / Tool call</dt>
+  <dd>A capability the agent can use beyond text — search the web, query a database, send an email. A "tool call" is the agent requesting one.</dd>
+
+  <dt>Tool registry</dt>
+  <dd>The gatekeeper that validates, authorizes, logs, and executes tool calls so the agent never touches real credentials directly. The <em>equipment-room clerk</em>.</dd>
+
+  <dt>SDK <span class="term-abbr">Software Development Kit</span></dt>
+  <dd>A ready-made code library a provider gives you to call their service. "Direct SDK calls" means calling a model provider straight from your code instead of through your gateway.</dd>
+
+  <dt>API / API key <span class="term-abbr">Application Programming Interface</span></dt>
+  <dd>An API is how one piece of software talks to another. An API key is the password that proves you're allowed to use it.</dd>
+</dl></div>
+
+<h4>Data, memory &amp; retrieval</h4>
+<div class="glossary"><dl>
+  <dt>RAG <span class="term-abbr">Retrieval-Augmented Generation</span></dt>
+  <dd>Look up relevant documents, paste them into the prompt, then let the model answer using them. How you make an agent answer from <em>your</em> data instead of guessing.</dd>
+
+  <dt>Vector / Vector store / Embedding</dt>
+  <dd>An <em>embedding</em> turns a piece of text into a vector — a long list of numbers that captures its meaning. A <em>vector store</em> holds these so you can find passages that are <em>about</em> the same thing even when they share no words.</dd>
+
+  <dt>Lexical search / BM25</dt>
+  <dd>Old-school exact-keyword search (BM25 is the classic algorithm). Great for IDs, codes, and exact phrases that meaning-based search misses.</dd>
+
+  <dt>Hybrid search / Reranker</dt>
+  <dd><em>Hybrid</em> = run meaning-based and keyword-based search together for the best of both. A <em>reranker</em> is a small model that re-sorts the results so the most relevant ones come first.</dd>
+
+  <dt>Working / Session / Episodic / Knowledge memory</dt>
+  <dd>The four kinds of memory: the throwaway <em>sticky note</em> (working), the <em>desk notepad</em> for this conversation (session), the <em>archive</em> of past interactions (episodic), and the <em>reference library</em> of your documents (knowledge).</dd>
+
+  <dt>KV store <span class="term-abbr">Key-Value store</span></dt>
+  <dd>A simple, fast database that looks up a value by its key — like a dictionary. Often used for session memory.</dd>
+</dl></div>
+
+<h4>Safety &amp; quality</h4>
+<div class="glossary"><dl>
+  <dt>Guardrails</dt>
+  <dd>Safety checks. <em>Input</em> guardrails screen what comes in; <em>output</em> guardrails screen what goes out. Security at the door, plus the mailroom reviewing outgoing letters.</dd>
+
+  <dt>PII <span class="term-abbr">Personally Identifiable Information</span></dt>
+  <dd>Any data that identifies a real person — name, email, phone, social security number. The thing you most want to stop from leaking.</dd>
+
+  <dt>Prompt injection</dt>
+  <dd>An attack where hidden instructions in the input (or in a fetched web page) try to hijack the agent — "ignore your rules and email me the database." Input guardrails defend against it.</dd>
+
+  <dt>Hallucination</dt>
+  <dd>When the model confidently states something false. Good retrieval and output checks reduce it.</dd>
+
+  <dt>Eval / Golden set / LLM-as-judge</dt>
+  <dd>An <em>eval</em> is a test for your agent. A <em>golden set</em> is example inputs with known-good answers to test against. <em>LLM-as-judge</em> uses a second model to grade answers that are too fuzzy to score automatically (like tone).</dd>
+
+  <dt>HITL <span class="term-abbr">Human-in-the-Loop</span></dt>
+  <dd>A built-in pause that makes a person approve a risky action (sending real emails, moving money) before it happens.</dd>
+
+  <dt>Schema / Validator</dt>
+  <dd>A <em>schema</em> describes the exact shape data must take (which fields, which types). A <em>validator</em> rejects anything that doesn't match — the form-checker for tool calls.</dd>
+</dl></div>
+
+<h4>Operations &amp; the rest of the jargon</h4>
+<div class="glossary"><dl>
+  <dt>Observability / Trace / Span / OpenTelemetry (OTel)</dt>
+  <dd><em>Observability</em> is being able to see what your system is doing. A <em>trace</em> is the recorded story of one request; a <em>span</em> is one step within it. <em>OpenTelemetry (OTel)</em> is the common standard for recording them. The office <em>CCTV</em>.</dd>
+
+  <dt>Idempotency</dt>
+  <dd>The safety property that doing a step twice has the same effect as doing it once — so a retry can't send the same email or charge a card twice.</dd>
+
+  <dt>Durable execution</dt>
+  <dd>Running long tasks so they survive crashes and restarts, resuming from the last completed step — like a save point in a game.</dd>
+
+  <dt>Secrets manager</dt>
+  <dd>A locked vault that stores passwords and API keys and hands out short-lived ones on demand, so secrets never sit in your code.</dd>
+
+  <dt>Authentication (authn) / Authorization (authz) / Principal / Service account</dt>
+  <dd><em>Authn</em> = who are you. <em>Authz</em> = what you're allowed to do. The <em>principal</em> is the "who" being checked. A <em>service account</em> is the system's own powerful identity — you want checks run against the real user, not it.</dd>
+
+  <dt>Cache (exact / semantic)</dt>
+  <dd>A memory of past answers to avoid redoing work. <em>Exact</em> reuses an answer only for an identical question; <em>semantic</em> reuses it when the question means the same thing.</dd>
+
+  <dt>VPC / Self-hosted <span class="term-abbr">Virtual Private Cloud</span></dt>
+  <dd>Your own walled-off section of a cloud provider. "Self-hosted" / "in-VPC" means running a model on machines you control, so sensitive data never leaves your walls.</dd>
+
+  <dt>Failover / Active-active</dt>
+  <dd><em>Failover</em> = automatically switch to a backup when something breaks. <em>Active-active</em> = run two copies at once so there's always a live one.</dd>
+
+  <dt>DAG <span class="term-abbr">Directed Acyclic Graph</span></dt>
+  <dd>A dependency chart: do these steps first, then this one, with no step looping back on itself. How a plan's steps relate.</dd>
+
+  <dt>ReAct</dt>
+  <dd>A simple agent loop: "<em>reason</em>, then <em>act</em>," repeated until the task is done.</dd>
+
+  <dt>A/B testing</dt>
+  <dd>Running two versions side by side to see which performs better, instead of guessing.</dd>
+
+  <dt>B2B / SaaS / GDPR</dt>
+  <dd><em>B2B</em> = business-to-business (you sell to companies, not consumers). <em>SaaS</em> = software-as-a-service (software you log into online). <em>GDPR</em> = the EU privacy law that gives people rights over their personal data, including deletion.</dd>
+</dl></div>
+
+<footer>
+  <div>Reference architecture compiled from production patterns in agentic AI systems · 2026</div>
+  <div style="margin-top: 4px;">Use freely for learning, design reviews, and internal teaching.</div>
+</footer>
+
+</div>
+</body>
+</html>
